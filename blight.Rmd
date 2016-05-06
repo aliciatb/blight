@@ -1,0 +1,160 @@
+---
+title: "Blight Prediction"
+author: "Alicia Brown"
+date: "May 6, 2016"
+output:
+  html_document:
+    theme: readable
+    toc: yes
+    toc_depth: 4
+  pdf_document:
+    toc: yes
+    toc_depth: 4
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(ggplot2)
+require(GGally)
+require(scales)
+require(caret)
+require(randomForest)
+```
+
+## The data
+The data provided for this project include 311 Service Calls, Crime Incidents, Blight Violations and Permits for Demolition. The first 3 datasets provide the foundation for a Buildings dataset that consists of unique locations as well as the source of derived features used in the model creation like *Number of Crimes*, *Number of Blight Violations*, and *Number of Service Calls*. These datasets were downloaded from the [course site](https://www.coursera.org/learn/datasci-capstone/supplement/D44tm/get-the-data), but are also available via [capstone project repo](https://github.com/uwescience/datasci_course_materials/tree/master/capstone/blight/data) on github. All of the data comes from [Socrata](https://www.socrata.com/) powered Detroit Data Portal, https://data.detroitmi.gov/.
+
+### Files
+* [Blight Violations](https://d18ky98rnyall9.cloudfront.net/_97bd1c1e5df9537bb13398c9898deed7_detroit-blight-violations.csv?Expires=1462320000&Signature=KjJzlAwVQBOONT-2ZJN7ixzhYeD~Cb1T5t4G5pIn1Alf3F7c0MTwnnYfstgr-hxGH12A9T4mayhz7uPl2zPYVk5VOIfHrkmTNiwudNJbZ0gtMjFXr~q7EFQSfi3nafc~W0sDZKezGVCVZCrPqN2RUddWIJfuli0erB1kvRNC75k_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A)
+* [311 Service Calls](https://d18ky98rnyall9.cloudfront.net/_dcebfb2135a2bf5a6392493bd61aba22_detroit-311.csv?Expires=1462320000&Signature=lfmBO8JTr0lHrxA-DYDkl~TfwaM6hEyPsqhhtnE1iKfEEoxKmHT62VwnJvnjccUcfrsdMfyz7YpFz-OvtXMVJBC4~d8mDPcLo~15nLr198gUHCpykWk2uV1nOln4kCQuSDvuusQDR9UMDSCAURf-I8lCM7LU3jy3IYOd73uY-HU_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A)
+* [Crime Incidents](https://d18ky98rnyall9.cloudfront.net/_dcebfb2135a2bf5a6392493bd61aba22_detroit-crime.csv?Expires=1462320000&Signature=FsI7KVjPOUR8ujpVKtMWouTgUmc0XY8RS2J5EjJa9Z-Yab61WBPBOroVrwoGa4UtAB9uDB2IJTVXzUx4LFz-zBEgGyd4BX4uZlbnnLkv82wW3FzJZcpMzKbpjfq0xtt4AY7DcRx69GzGl84EE4is~C5hoOIVThMcTKaALabpwW4_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A)
+* [Demolition Permits](https://d18ky98rnyall9.cloudfront.net/_dcebfb2135a2bf5a6392493bd61aba22_detroit-demolition-permits.tsv?Expires=1462320000&Signature=DeM232D0rs-DrPVf23KpOpGRsVyBLA6Xatck93XuCVxPcGqiO5iDsZz0UT3xzmJq3foSCpFscyldveFaHlhxCHciC89FgLIagwb0oBzowXhpoPRlQrqycIr7PAN10YQ0k5l6xI1UmUfu-yHXaiIIFr5Kevvct-2WrHK-br8Tb7Y_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A)
+
+**Note** - I downloaded this [Detroit Demolition](https://data.detroitmi.gov/Government/Detroit-Demolitions/rv44-e9di) to use rather than one of building permits provided by instructor since it was cleaner data and contained only the essential fields needed to label known blight locations.
+
+### Data preparation & Tools
+The greatest challenge in the provided data from Socrata is within the Location column because it concatenates all of the fields used in the geocoding process, and when address fields are included, line breaks are entered into the field and cause havoc until they are removed from the data file.
+Before analysis of the data could be undertaken, all files were initially formatted using [Excel PowerQuery](https://support.office.com/en-us/article/Introduction-to-Microsoft-Power-Query-for-Excel-6E92E2F4-2079-4E1F-BAD5-89F6269CD605) for removal of aforementioned line breaks and standardization of the street number and addresses. Then the data was loaded into [FME](https://www.safe.com/fme/fme-desktop/) to validate and standardize the geographic coordinates and output formatted incident and unique building files. Exploratory analysis and model creation was performed in [python notebooks](https://ipython.org/notebook.html) and [RStudio]().
+
+### Buildings
+
+### Features
+
+## Models
+For the prediction of whether a location is blighted or not, I used classification tree models to answer that questions. Classification trees identify feature importance and provide a visual representation of the feature path taken to form the best performing model.
+
+### Training & Test datasets
+In order to estimate the accuracy of a model, one must divide the data into training and test datasets. I have allocated 75% of the data for training the models.
+
+```{r data, warning = FALSE, message = FALSE, echo=FALSE}
+data = read.csv('building_blight_features.csv',header = TRUE)
+# set categorical values
+data$blight = factor(data$blight)
+
+data = na.omit(data)
+# summary(data)
+# select the training observations
+in_train = createDataPartition(y = data$blight,
+                               p = 0.75, # 75% in train, 25% in test
+                               list = FALSE)
+
+train = data[in_train, ]
+test = data[-in_train, ]
+
+# drop the ids and coordinates
+train$Address = NULL
+test$Address = NULL
+train$Latitude = NULL
+test$Latitude = NULL
+train$Longitude = NULL
+test$Longitude = NULL
+```
+
+### Tree Model
+The first model is a simple tree.
+```{r treeModel, message=FALSE, warning=FALSE, echo=FALSE,eval=TRUE}
+tree_model = train(factor(blight) ~., 
+                   method = 'rpart',
+                   data = train)
+print(tree_model)
+print(tree_model$finalModel)
+plot(varImp(tree_model))
+
+# plot the tree!
+plot(tree_model$finalModel)
+text(tree_model$finalModel, use.n = TRUE, all = TRUE, cex = 0.60)
+
+
+# test the predictions
+tree_predictions = predict(tree_model, newdata = test)
+confusionMatrix(tree_predictions, test$blight)
+```
+
+### Bagging Model
+The next model involves Bootstrap Aggregating where the data is randomly resampled multiple times and the average is returned.
+```{r bagModel, message=FALSE, warning=FALSE, echo=FALSE, eval=TRUE}
+bagged_model = train(blight ~.,
+                     method = 'treebag',
+                     data = train)
+print(bagged_model)
+print(bagged_model$finalModel)
+
+bagged_predictions = predict(bagged_model, test)
+confusionMatrix(bagged_predictions, test$blight)
+```
+
+### Boosting Model
+This model will combine weak classifiers so they can contribute to creating a more powerful model.
+```{r boostModel, message=FALSE, warning=FALSE, echo=FALSE, eval=FALSE}
+boost_model = train(blight ~.,
+                    method = 'gbm',
+                    data = train,
+                    verbose = FALSE)
+print(boost_model)
+plot(boost_model)
+summary(boost_model$finalModel)
+
+# predict
+boost_predictions = predict(boost_model, test)
+confusionMatrix(boost_predictions, test$blight)
+```
+
+### Other Models
+A Random Forest model is the most powerful of the tree classification models that involves bagging where it also resamples the feature combinations. However, the complexity of its algorithm causes long processing and in this case caused memory exceptions on 2 different and otherwise powerful macbookpro and imac computers, so was unable to run this model successfully.
+```{r forestModel, message=FALSE, warning=FALSE, eval=FALSE}
+rf_model = train(blight ~.,
+                 data = train,
+                 method = 'rf',
+                 prox = TRUE,
+                 verbose = FALSE)
+
+print(rf_model)
+summary(rf_model)
+plot(rf_model)
+plot(rf_model$finalModel)
+
+# pull a tree out of the forest
+getTree(rf_model$finalModel, k = 5)
+
+# predict
+rf_predictions = predict(rf_model, test)
+confusionMatrix(rf_predictions, test$blight)
+```
+
+## Model Comparison
+
+```{r results, message=FALSE, warning=FALSE, eval=FALSE}
+# compare
+results = resamples(list(tree_model = tree_model, 
+                         bagged_model = bagged_model,
+                         boost_model = boost_model))
+
+# compare accuracy and kappa
+summary(results)
+
+# plot results
+dotplot(results)
+```
+
+## Conclusion
+
