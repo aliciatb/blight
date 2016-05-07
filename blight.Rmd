@@ -3,11 +3,11 @@ title: "Blight Prediction"
 author: "Alicia Brown"
 date: "May 7, 2016"
 output:
-  html_document:
-    theme: readable
+  pdf_document:
     toc: yes
     toc_depth: 4
-  pdf_document:
+  html_document:
+    theme: readable
     toc: yes
     toc_depth: 4
 ---

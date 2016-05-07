@@ -3,10 +3,12 @@ require(GGally)
 require(scales)
 require(caret)
 require(randomForest)
+library(rattle)
 
-setwd('~/projects/public_scripts/blight')
+setwd('~/projects/blight')
 data = read.csv('building_blight_features.csv',
-                  header = TRUE)
+                header = TRUE)
+
 # set categorical values
 data$blight = factor(data$blight)
 
@@ -20,14 +22,23 @@ in_train = createDataPartition(y = data$blight,
 train = data[in_train, ]
 test = data[-in_train, ]
 
-# drop the ids and coordinates
+# drop unuseful fields
 train$Address = NULL
 test$Address = NULL
 train$Latitude = NULL
 test$Latitude = NULL
 train$Longitude = NULL
 test$Longitude = NULL
+train$ParcelNo = NULL
+test$ParcelNo = NULL
+train$PropAddr = NULL
+test$PropAddr = NULL
+train$ResYrBuilt = NULL
+test$ResYrBuilt = NULL
+train$TaxStatus = NULL
+test$TaxStatus = NULL
 
+# first model
 tree_model = train(factor(blight) ~., 
                    method = 'rpart',
                    data = train)
@@ -39,6 +50,7 @@ plot(varImp(tree_model))
 plot(tree_model$finalModel)
 text(tree_model$finalModel, use.n = TRUE, all = TRUE, cex = 0.60)
 
+fancyRpartPlot(tree_model$finalModel)
 
 # test the predictions
 tree_predictions = predict(tree_model, newdata = test)
