@@ -1,7 +1,7 @@
 ---
 title: "Blight Prediction"
 author: "Alicia Brown"
-date: "May 6, 2016"
+date: "May 7, 2016"
 output:
   html_document:
     theme: readable
@@ -22,7 +22,7 @@ require(randomForest)
 ```
 
 ## The data
-The data provided for this project include 311 Service Calls, Crime Incidents, Blight Violations and Permits for Demolition. The first 3 datasets provide the foundation for a Buildings dataset that consists of unique locations as well as the source of derived features used in the model creation like *Number of Crimes*, *Number of Blight Violations*, and *Number of Service Calls*. These datasets were downloaded from the [course site](https://www.coursera.org/learn/datasci-capstone/supplement/D44tm/get-the-data), but are also available via [capstone project repo](https://github.com/uwescience/datasci_course_materials/tree/master/capstone/blight/data) on github. All of the data comes from [Socrata](https://www.socrata.com/) powered Detroit Data Portal, https://data.detroitmi.gov/.
+The data provided for this project include 311 Service Calls, Crime Incidents, Blight Violations and Permits for Demolition. The first 3 datasets provide the foundation for a Buildings dataset that consists of unique locations as well as the source of derived features used in the model creation like *Number of Crimes*, *Number of Blight Violations*, and *Number of Service Calls*. These datasets were downloaded from the [course site](https://www.coursera.org/learn/datasci-capstone/supplement/D44tm/get-the-data), but are also available via [capstone project repo](https://github.com/uwescience/datasci_course_materials/tree/master/capstone/blight/data) on github. All of the data comes from [Socrata](https://www.socrata.com/) powered Detroit Open Data Portal, https://data.detroitmi.gov/.
 
 ### Files
 * [Blight Violations](https://d18ky98rnyall9.cloudfront.net/_97bd1c1e5df9537bb13398c9898deed7_detroit-blight-violations.csv?Expires=1462320000&Signature=KjJzlAwVQBOONT-2ZJN7ixzhYeD~Cb1T5t4G5pIn1Alf3F7c0MTwnnYfstgr-hxGH12A9T4mayhz7uPl2zPYVk5VOIfHrkmTNiwudNJbZ0gtMjFXr~q7EFQSfi3nafc~W0sDZKezGVCVZCrPqN2RUddWIJfuli0erB1kvRNC75k_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A)
@@ -30,15 +30,28 @@ The data provided for this project include 311 Service Calls, Crime Incidents, B
 * [Crime Incidents](https://d18ky98rnyall9.cloudfront.net/_dcebfb2135a2bf5a6392493bd61aba22_detroit-crime.csv?Expires=1462320000&Signature=FsI7KVjPOUR8ujpVKtMWouTgUmc0XY8RS2J5EjJa9Z-Yab61WBPBOroVrwoGa4UtAB9uDB2IJTVXzUx4LFz-zBEgGyd4BX4uZlbnnLkv82wW3FzJZcpMzKbpjfq0xtt4AY7DcRx69GzGl84EE4is~C5hoOIVThMcTKaALabpwW4_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A)
 * [Demolition Permits](https://d18ky98rnyall9.cloudfront.net/_dcebfb2135a2bf5a6392493bd61aba22_detroit-demolition-permits.tsv?Expires=1462320000&Signature=DeM232D0rs-DrPVf23KpOpGRsVyBLA6Xatck93XuCVxPcGqiO5iDsZz0UT3xzmJq3foSCpFscyldveFaHlhxCHciC89FgLIagwb0oBzowXhpoPRlQrqycIr7PAN10YQ0k5l6xI1UmUfu-yHXaiIIFr5Kevvct-2WrHK-br8Tb7Y_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A)
 
-**Note** - I downloaded this [Detroit Demolition](https://data.detroitmi.gov/Government/Detroit-Demolitions/rv44-e9di) to use rather than one of building permits provided by instructor since it was cleaner data and contained only the essential fields needed to label known blight locations.
+**Note** - I downloaded this [Detroit Demolition](https://data.detroitmi.gov/Government/Detroit-Demolitions/rv44-e9di) dataset to use rather than one of building permits provided by instructor since it was cleaner data and contained only the essential fields needed to label known blight locations.
 
 ### Data preparation & Tools
 The greatest challenge in the provided data from Socrata is within the Location column because it concatenates all of the fields used in the geocoding process, and when address fields are included, line breaks are entered into the field and cause havoc until they are removed from the data file.
-Before analysis of the data could be undertaken, all files were initially formatted using [Excel PowerQuery](https://support.office.com/en-us/article/Introduction-to-Microsoft-Power-Query-for-Excel-6E92E2F4-2079-4E1F-BAD5-89F6269CD605) for removal of aforementioned line breaks and standardization of the street number and addresses. Then the data was loaded into [FME](https://www.safe.com/fme/fme-desktop/) to validate and standardize the geographic coordinates and output formatted incident and unique building files. Exploratory analysis and model creation was performed in [python notebooks](https://ipython.org/notebook.html) and [RStudio]().
+Before analysis of the data could be undertaken, all files were initially formatted using [Excel PowerQuery](https://support.office.com/en-us/article/Introduction-to-Microsoft-Power-Query-for-Excel-6E92E2F4-2079-4E1F-BAD5-89F6269CD605) for removal of aforementioned line breaks and standardization of the street number and addresses. Then the data was loaded into [FME](https://www.safe.com/fme/fme-desktop/), an amazing ETL tool, to validate and standardize the geographic coordinates and create well formatted incident and unique building files. Exploratory analysis and model creation was performed in [python notebooks](https://ipython.org/notebook.html) and [RStudio]().
 
 ### Buildings
+In order to derive a building, within the incident files, the latitude and longitude coordinates were rounded to 3 decimal points and then each file was individually joined with the demolition data that also had its latitude and longitude coordinates rounded to the same number of decimal points. Where there was a match in each file, then that building record was also labeled as blight. Any incident record that lacked a coordinate was excluded from the final dataset.
 
 ### Features
+Features drive the creation of predicton models because it is in their diversity that differences can be discovered that explain why one given building may be more prone to becoming blightful than another. In one of the readings for the course, [Spatial Characteristics of Housing Abandonment](https://github.com/uwescience/datasci_course_materials/capstone/blight/readings/morckel_spatial_characteristics_of_housing_abandonment.pdf), Dr. Morckel surmises that housing abandonment is a result of 3 key conditions - market conditions, gentrification and physical neglect. For this project, we are mostly focusing on the data evidence of neglect.
+
+The first features added to the building dataset include a count of total 311 calls, crime incidents and blight violation citations for a given building. No filtering was performed on any of the incident datasets, because I didn't want to presume that calls about infrastructure or non-violent crimes are not related to a geographic inclination towards neglect.
+
+A second set of features were added from a [Property Values dataset](https://data.detroitmi.gov/d/ug2h-q3n5) found on the [Detroit Data Portal](https://data.detroitmi.gov/) that included appraised and taxed values, sales price, tax status, and whether it had been improved at any point. It also included well formatted street address and latitude and longitude coordinates which helped to further reduce the overall building dataset since any buildings that lack features are not useful in generating prediction models.
+
+Features that were not included in this project that would be interesting to add so that the model accounts for possible gentrification and economic conditions could include -
+* [Building Permits](https://data.detroitmi.gov/Property-Parcels/Building-Permits-Summary/4pit-zggk) - alterations and other types that may signal gentrification in progress in neighborhood
+* [Zillow Zestimate](http://www.zillow.com/zestimate/) for an address 
+* [American Community Survey](https://www.census.gov/programs-surveys/acs/) annual estimates on income, mortgage and rental at Census tract block level
+
+It would also be interesting to consider time as a factor and perhaps calculate incident counts at 90 day, 180 day and annual intervals before demolition.
 
 ## Models
 For the prediction of whether a location is blighted or not, I used classification tree models to answer that questions. Classification trees identify feature importance and provide a visual representation of the feature path taken to form the best performing model.
@@ -47,9 +60,13 @@ For the prediction of whether a location is blighted or not, I used classificati
 In order to estimate the accuracy of a model, one must divide the data into training and test datasets. I have allocated 75% of the data for training the models.
 
 ```{r data, warning = FALSE, message = FALSE, echo=FALSE}
-data = read.csv('building_blight_features.csv',header = TRUE)
+setwd('~/projects/blight')
+data = read.csv('building_blight_features.csv',
+                  header = TRUE)
 # set categorical values
 data$blight = factor(data$blight)
+data$TaxStatus = factor(data$TaxStatus)
+data$IsImproved = factor(data$IsImproved)
 
 data = na.omit(data)
 # summary(data)
@@ -61,13 +78,19 @@ in_train = createDataPartition(y = data$blight,
 train = data[in_train, ]
 test = data[-in_train, ]
 
-# drop the ids and coordinates
+# drop unuseful fields
 train$Address = NULL
 test$Address = NULL
 train$Latitude = NULL
 test$Latitude = NULL
 train$Longitude = NULL
 test$Longitude = NULL
+train$ParcelNo = NULL
+test$ParcelNo = NULL
+train$PropAddr = NULL
+test$PropAddr = NULL
+train$ResYrBuilt = NULL
+test$ResYrBuilt = NULL
 ```
 
 ### Tree Model
@@ -105,7 +128,7 @@ confusionMatrix(bagged_predictions, test$blight)
 
 ### Boosting Model
 This model will combine weak classifiers so they can contribute to creating a more powerful model.
-```{r boostModel, message=FALSE, warning=FALSE, echo=FALSE, eval=FALSE}
+```{r boostModel, message=FALSE, warning=FALSE, echo=FALSE, eval=TRUE}
 boost_model = train(blight ~.,
                     method = 'gbm',
                     data = train,
@@ -121,29 +144,10 @@ confusionMatrix(boost_predictions, test$blight)
 
 ### Other Models
 A Random Forest model is the most powerful of the tree classification models that involves bagging where it also resamples the feature combinations. However, the complexity of its algorithm causes long processing and in this case caused memory exceptions on 2 different and otherwise powerful macbookpro and imac computers, so was unable to run this model successfully.
-```{r forestModel, message=FALSE, warning=FALSE, eval=FALSE}
-rf_model = train(blight ~.,
-                 data = train,
-                 method = 'rf',
-                 prox = TRUE,
-                 verbose = FALSE)
-
-print(rf_model)
-summary(rf_model)
-plot(rf_model)
-plot(rf_model$finalModel)
-
-# pull a tree out of the forest
-getTree(rf_model$finalModel, k = 5)
-
-# predict
-rf_predictions = predict(rf_model, test)
-confusionMatrix(rf_predictions, test$blight)
-```
 
 ## Model Comparison
 
-```{r results, message=FALSE, warning=FALSE, eval=FALSE}
+```{r results, message=FALSE, warning=FALSE, eval=TRUE}
 # compare
 results = resamples(list(tree_model = tree_model, 
                          bagged_model = bagged_model,
@@ -157,4 +161,4 @@ dotplot(results)
 ```
 
 ## Conclusion
-
+Tree model wins and suggests that crime and blight violations counts are key factors in whether a building is blight.
