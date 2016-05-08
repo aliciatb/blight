@@ -19,6 +19,7 @@ require(GGally)
 require(scales)
 require(caret)
 require(randomForest)
+library(rattle)
 ```
 
 ## The data
@@ -54,7 +55,7 @@ Features that were not included in this project that would be interesting to add
 It would also be interesting to consider time as a factor and perhaps calculate incident counts at 90 day, 180 day and annual intervals before demolition.
 
 ## Models
-For the prediction of whether a location is blighted or not, I used classification tree models to answer that questions. Classification trees identify feature importance and provide a visual representation of the feature path taken to form the best performing model.
+For the prediction of whether a location is blighted or not, I used logistic regression and classification tree models to answer that questions. Logistic regression models the probability that an outcome belongs to a category. Classification trees identify feature importance and provide a visual representation of the feature path taken to form the best performing model.
 
 ### Training & Test datasets
 In order to estimate the accuracy of a model, one must divide the data into training and test datasets. I have allocated 75% of the data for training the models.
@@ -93,6 +94,45 @@ train$ResYrBuilt = NULL
 test$ResYrBuilt = NULL
 ```
 
+### Logistic Regression Model
+```{r logModel, message=FALSE, warning=FALSE, echo=FALSE,eval=TRUE}
+logistic_model = train(blight ~ ., 
+                       data = na.omit(train),  
+                       method = 'glm',
+                       family = binomial,
+                       preProcess = c('center', 'scale'))
+
+summary(logistic_model)
+plot(varImp(logistic_model))
+
+# test predictions
+logistic_predictions = predict(logistic_model, newdata = test)
+confusionMatrix(logistic_predictions, test$blight)
+
+# stepwise logisitic regression
+step_model = train(blight ~ ., 
+                   data = na.omit(train),  
+                   method = 'glmStepAIC',
+                   family = binomial,
+                   preProcess = c('center', 'scale'))
+summary(step_model)
+plot(varImp(step_model))
+
+step_predictions = predict(step_model, newdata = test)
+confusionMatrix(step_predictions, test$blight)
+
+# compare
+results = resamples(list(logistic_model = logistic_model, 
+                         step_model = step_model))
+
+# compare accuracy and kappa
+summary(results)
+
+# plot results
+dotplot(results)
+```
+
+
 ### Tree Model
 The first model is a simple tree.
 ```{r treeModel, message=FALSE, warning=FALSE, echo=FALSE,eval=TRUE}
@@ -104,9 +144,10 @@ print(tree_model$finalModel)
 plot(varImp(tree_model))
 
 # plot the tree!
-plot(tree_model$finalModel)
-text(tree_model$finalModel, use.n = TRUE, all = TRUE, cex = 0.60)
+# plot(tree_model$finalModel)
+# text(tree_model$finalModel, use.n = TRUE, all = TRUE, cex = 0.60)
 
+fancyRpartPlot(tree_model$finalModel,main="Tree Model Decisions",sub="")
 
 # test the predictions
 tree_predictions = predict(tree_model, newdata = test)
