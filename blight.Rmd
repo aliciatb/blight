@@ -1,7 +1,7 @@
 ---
 title: "Blight Prediction"
 author: "Alicia Brown"
-date: "May 7, 2016"
+date: "May 8, 2016"
 output:
   pdf_document:
     toc: yes
@@ -21,6 +21,8 @@ require(caret)
 require(randomForest)
 library(rattle)
 ```
+## Overview
+The purpose of this project was to determine if any data features of a city can be used to predict blight for a given location. All code, ETL workflow and analysis is available on https://github.com/aliciatb/blight.
 
 ## The data
 The data provided for this project include 311 Service Calls, Crime Incidents, Blight Violations and Permits for Demolition. The first 3 datasets provide the foundation for a Buildings dataset that consists of unique locations as well as the source of derived features used in the model creation like *Number of Crimes*, *Number of Blight Violations*, and *Number of Service Calls*. These datasets were downloaded from the [course site](https://www.coursera.org/learn/datasci-capstone/supplement/D44tm/get-the-data), but are also available via [capstone project repo](https://github.com/uwescience/datasci_course_materials/tree/master/capstone/blight/data) on github. All of the data comes from [Socrata](https://www.socrata.com/) powered Detroit Open Data Portal, https://data.detroitmi.gov/.
@@ -35,7 +37,10 @@ The data provided for this project include 311 Service Calls, Crime Incidents, B
 
 ### Data preparation & Tools
 The greatest challenge in the provided data from Socrata is within the Location column because it concatenates all of the fields used in the geocoding process, and when address fields are included, line breaks are entered into the field and cause havoc until they are removed from the data file.
-Before analysis of the data could be undertaken, all files were initially formatted using [Excel PowerQuery](https://support.office.com/en-us/article/Introduction-to-Microsoft-Power-Query-for-Excel-6E92E2F4-2079-4E1F-BAD5-89F6269CD605) for removal of aforementioned line breaks and standardization of the street number and addresses. Then the data was loaded into [FME](https://www.safe.com/fme/fme-desktop/), an amazing ETL tool, to validate and standardize the geographic coordinates and create well formatted incident and unique building files. Exploratory analysis and model creation was performed in [python notebooks](https://ipython.org/notebook.html) and [RStudio]().
+Before analysis of the data could be undertaken, all files were initially formatted using [Excel PowerQuery](https://support.office.com/en-us/article/Introduction-to-Microsoft-Power-Query-for-Excel-6E92E2F4-2079-4E1F-BAD5-89F6269CD605) for removal of aforementioned line breaks and standardization of the street number and addresses. Then the data was loaded into [FME](https://www.safe.com/fme/fme-desktop/), a powerful ETL tool, to validate and standardize the geographic coordinates and create well formatted incident and unique building files. Exploratory analysis and model creation was performed in [python notebooks](https://ipython.org/notebook.html) and [RStudio](https://www.rstudio.com/products/rstudio/).
+
+#### FME Workflow Screenshot
+![fme](https://github.com/aliciatb/blight/blob/master/fme_workflow.png)
 
 ### Buildings
 In order to derive a building, within the incident files, the latitude and longitude coordinates were rounded to 3 decimal points and then each file was individually joined with the demolition data that also had its latitude and longitude coordinates rounded to the same number of decimal points. Where there was a match in each file, then that building record was also labeled as blight. Any incident record that lacked a coordinate was excluded from the final dataset.
@@ -66,7 +71,6 @@ data = read.csv('building_blight_features.csv',
                   header = TRUE)
 # set categorical values
 data$blight = factor(data$blight)
-data$TaxStatus = factor(data$TaxStatus)
 data$IsImproved = factor(data$IsImproved)
 
 data = na.omit(data)
@@ -92,6 +96,8 @@ train$PropAddr = NULL
 test$PropAddr = NULL
 train$ResYrBuilt = NULL
 test$ResYrBuilt = NULL
+train$TaxStatus = NULL
+test$TaxStatus = NULL
 ```
 
 ### Logistic Regression Model
@@ -110,26 +116,26 @@ logistic_predictions = predict(logistic_model, newdata = test)
 confusionMatrix(logistic_predictions, test$blight)
 
 # stepwise logisitic regression
-step_model = train(blight ~ ., 
-                   data = na.omit(train),  
-                   method = 'glmStepAIC',
-                   family = binomial,
-                   preProcess = c('center', 'scale'))
-summary(step_model)
-plot(varImp(step_model))
-
-step_predictions = predict(step_model, newdata = test)
-confusionMatrix(step_predictions, test$blight)
-
-# compare
-results = resamples(list(logistic_model = logistic_model, 
-                         step_model = step_model))
-
-# compare accuracy and kappa
-summary(results)
-
-# plot results
-dotplot(results)
+# step_model = train(blight ~ ., 
+#                    data = na.omit(train),  
+#                    method = 'glmStepAIC',
+#                    family = binomial,
+#                    preProcess = c('center', 'scale'))
+# summary(step_model)
+# plot(varImp(step_model))
+# 
+# step_predictions = predict(step_model, newdata = test)
+# confusionMatrix(step_predictions, test$blight)
+# 
+# # compare
+# results = resamples(list(logistic_model = logistic_model, 
+#                          step_model = step_model))
+# 
+# # compare accuracy and kappa
+# summary(results)
+# 
+# # plot results
+# dotplot(results)
 ```
 
 
@@ -203,3 +209,7 @@ dotplot(results)
 
 ## Conclusion
 Tree model wins and suggests that crime and blight violations counts are key factors in whether a building is blight.
+
+## Resources & Readings
+* [Detroit Blight Removal Task Force Plan](http://report.timetoendblight.org/index.html)
+* [Course Readings](https://github.com/uwescience/datasci_course_materials/tree/master/capstone/blight/readings)
