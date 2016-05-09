@@ -42,7 +42,7 @@ Before analysis of the data could be undertaken, all files were initially format
 ![fme](https://github.com/aliciatb/blight/blob/master/fme_workflow.png)
 
 ### Buildings
-In order to derive a building, within the incident files, the latitude and longitude coordinates were rounded to 3 decimal points and then each file was individually joined with the demolition data that also had its latitude and longitude coordinates rounded to the same number of decimal points. Where there was a match in each file, then that building record was also labeled as blight. Any incident record that lacked a coordinate was excluded from the final dataset.
+In order to derive a building, within the incident files, the latitude and longitude coordinates were rounded to 3 decimal points and then each file was individually joined with the demolition data that also had its latitude and longitude coordinates rounded to the same number of decimal points. Where there was a match in each file, then that building record was also labeled as blight. Any incident record that lacked a coordinate was excluded from the final dataset. One interesting discovery is that street addresses are not consistently captured accross datasets and could not be relied on for aggregation due to variances in the same address.
 
 ### Features
 Features drive the creation of predicton models because it is in their diversity that differences can be discovered that explain why one given building may be more prone to becoming blightful than another. In one of the readings for the course, [Spatial Characteristics of Housing Abandonment](https://github.com/uwescience/datasci_course_materials/capstone/blight/readings/morckel_spatial_characteristics_of_housing_abandonment.pdf), Dr. Morckel surmises that housing abandonment is a result of 3 key conditions - market conditions, gentrification and physical neglect. For this project, we are mostly focusing on the data evidence of neglect.
@@ -59,10 +59,10 @@ Features that were not included in this project that would be interesting to add
 It would also be interesting to consider time as a factor and perhaps calculate incident counts at 90 day, 180 day and annual intervals before demolition.
 
 ## Models
-For the prediction of whether a location is blighted or not, I used logistic regression and classification tree models to answer that questions. Logistic regression models the probability that an outcome belongs to a category. Classification trees identify feature importance and provide a visual representation of the feature path taken to form the best performing model.
+For the prediction of whether a location is blighted or not, I used logistic regression and classification tree models to answer that questions. Logistic regression models the probability that an outcome belongs to a category. Classification trees identify feature importance and provide a visual representation of the feature path taken to form the best performing model. The models will be judged on their Accuracy and Kappa values. Kappa values evaluate whether the accuracy is due to random chance.
 
 ### Training & Test datasets
-In order to estimate the accuracy of a model, one must divide the data into training and test datasets. I have allocated 75% of the data for training the models.
+In order to estimate the accuracy of a model, one must divide the data into training and test datasets. I have allocated 75% of the data for training the models. I have also set both blight and IsImproved fields to factors and dropped fields from the dataset like Address, Latitude, Longitude, Parcel Number, Tax Status and Year that Residence was built so that the models evaluated only the fields - IsImproved, Appraised Value, Taxed Value, Ward Number, and number of 311 calls, crimes, and blight violations as indicators of blight. Originally, Tax Status was included, but its importance to all models was not significant. 
 
 ```{r data, warning = FALSE, message = FALSE, echo=FALSE}
 setwd('~/projects/blight')
@@ -110,41 +110,18 @@ logistic_model = train(blight ~ .,
 summary(logistic_model)
 plot(varImp(logistic_model))
 
-# test predictions
+# test predictions against test set
 logistic_predictions = predict(logistic_model, newdata = test)
-confusionMatrix(logistic_predictions, test$blight)
+log_matrix = confusionMatrix(logistic_predictions, test$blight)
+# Of the predictions, the [confusion matrix](http://en.wikipedia.org/wiki/Confusion_matrix) indicates
+# **`r log_matrix[1,1]`** true positives, **`r log_matrix[2,1]`** false negatives, **`r log_matrix[1,2]`** false positives and **`r log_matrix[2,2]`** true negatives.
 
-# stepwise logisitic regression
-# step_model = train(blight ~ ., 
-#                    data = na.omit(train),  
-#                    method = 'glmStepAIC',
-#                    family = binomial,
-#                    preProcess = c('center', 'scale'))
-# summary(step_model)
-# plot(varImp(step_model))
-# 
-# step_predictions = predict(step_model, newdata = test)
-# confusionMatrix(step_predictions, test$blight)
-<<<<<<< HEAD
-
-# compare
-=======
-# 
-# # compare
->>>>>>> fd4db9d1233da977c75dcffc49e292a5bcf25aec
-# results = resamples(list(logistic_model = logistic_model, 
-#                          step_model = step_model))
-# 
-# # compare accuracy and kappa
-# summary(results)
-# 
-# # plot results
-# dotplot(results)
 ```
 
-
+#### Logistic Model Analysis
+This model indicates that the top 3 fields that have the most predictive value are **Blight Violation Count**, **Crime Count** and **311 Call Count**. The overall accuracy of the model is 100% with a Kappa value of 100%.
 ### Tree Model
-The first model is a simple tree.
+The first model is a simple tree that reveals the decisions that most frequently indicated what factors led to blight classfication. 
 ```{r treeModel, message=FALSE, warning=FALSE, echo=FALSE,eval=TRUE}
 tree_model = train(factor(blight) ~., 
                    method = 'rpart',
@@ -153,16 +130,20 @@ print(tree_model)
 print(tree_model$finalModel)
 plot(varImp(tree_model))
 
-# plot the tree!
-# plot(tree_model$finalModel)
-# text(tree_model$finalModel, use.n = TRUE, all = TRUE, cex = 0.60)
+# plot the tree model
+plot(tree_model$finalModel)
+text(tree_model$finalModel, use.n = TRUE, all = TRUE, cex = 0.60)
 
-# fancyRpartPlot(tree_model$finalModel,main="Tree Model Decisions",sub="")
-
-# test the predictions
+# test predictions against test set
 tree_predictions = predict(tree_model, newdata = test)
-confusionMatrix(tree_predictions, test$blight)
+tree_matrix = confusionMatrix(tree_predictions, test$blight)
+
+# Of the predictions, the [confusion matrix](http://en.wikipedia.org/wiki/Confusion_matrix) indicates
+# **`r tree_matrix[1,1]`** true positives, **`r tree_matrix[2,1]`** false negatives, **`r tree_matrix[1,2]`** false positives and **`r tree_matrix[2,2]`** true negatives.
 ```
+
+#### Tree Model Analysis
+This model indicates that the top 3 fields that have the most predictive value are **Crime Count**, **Blight Violation Count** and **311 Call Count**. The overall accuracy of the model is 99.98% with a Kappa value of 99.72%.
 
 ### Bagging Model
 The next model involves Bootstrap Aggregating where the data is randomly resampled multiple times and the average is returned.
@@ -172,11 +153,17 @@ bagged_model = train(blight ~.,
                      data = train)
 print(bagged_model)
 print(bagged_model$finalModel)
+plot(varImp(bagged_model))
 
 bagged_predictions = predict(bagged_model, test)
-confusionMatrix(bagged_predictions, test$blight)
+bag_matrix = confusionMatrix(bagged_predictions, test$blight)
+
+# Of the predictions, the [confusion matrix](http://en.wikipedia.org/wiki/Confusion_matrix) indicates
+# **`r bag_matrix[1,1]`** true positives, **`r bag_matrix[2,1]`** false negatives, **`r bag_matrix[1,2]`** false positives and **`r bag_matrix[2,2]`** true negatives.
 ```
 
+#### Bagging Model Analysis
+This model indicates that the top 3 fields that have the most predictive value are **Blight Violation Count**, **Crime Count** and **311 Call Count**. The overall accuracy of the model is 100% with a Kappa value of 100%.
 ### Boosting Model
 This model will combine weak classifiers so they can contribute to creating a more powerful model.
 ```{r boostModel, message=FALSE, warning=FALSE, echo=FALSE, eval=TRUE}
@@ -190,13 +177,20 @@ summary(boost_model$finalModel)
 
 # predict
 boost_predictions = predict(boost_model, test)
-confusionMatrix(boost_predictions, test$blight)
+boost_matrix = confusionMatrix(boost_predictions, test$blight)
+
+# Of the predictions, the [confusion matrix](http://en.wikipedia.org/wiki/Confusion_matrix) indicates
+# **`r boost_matrix[1,1]`** true positives, **`r boost_matrix[2,1]`** false negatives, **`r boost_matrix[1,2]`** false positives and **`r boost_matrix[2,2]`** true negatives.
 ```
+
+#### Boosting Model Analysis
+This model indicates that the top 3 fields that have the most predictive value are **Blight Violation Count**, **Crime Count** and **311 Call Count**. The overall accuracy of the model is 100% with a Kappa value of 100%.
 
 ### Other Models
 A Random Forest model is the most powerful of the tree classification models that involves bagging where it also resamples the feature combinations. However, the complexity of its algorithm causes long processing and in this case caused memory exceptions on 2 different and otherwise powerful macbookpro and imac computers, so was unable to run this model successfully.
 
 ## Model Comparison
+It is easy to compare the 4 models in R and generating a visualization on how they compare using Caret package [resample methods] (http://www.inside-r.org/packages/cran/caret/docs/as.matrix.resamples).
 
 ```{r results, message=FALSE, warning=FALSE, eval=TRUE}
 # compare
@@ -213,7 +207,9 @@ dotplot(results)
 ```
 
 ## Conclusion
-Tree model wins and suggests that crime and blight violations counts are key factors in whether a building is blight.
+Three of the the four models returned accuracy and kappa values of 100%, while the 4th scored 99.9% accuracy and 97% kappa values and all indicated that blight violation and crime counts are key factors in whether a building is blight, with 311 call counts also being a significant indicator. It isn't surprising that these 3 attributes are excellent indicators of blight, but their usefulness in building a model to predict the probability of blight can be questionable if the goal of a city is to become aware of potential blight early enough to be able to counter whatever conditions are truly the underlying cause of blight. For this reason, I think it is very important to build models using economic and gentrifying features in addition to physical neglect and crime statistics because they may be able to reveal problem areas early. I would also like to account for time in models and see if there is a significant difference in incident counts at different time intervals.
+
+In addition to adding more economic features in model building, I am excited about the possibility of a new feature that FME has added to its latest release is the [RCaller transformer](http://docs.safe.com/fme/2016.1/html/FME_Desktop_Documentation/FME_Transformers/Transformers/rcaller.htm) that I hope will allow it to leverage the [Caret library](http://topepo.github.io/caret/index.html) which is what I used entirely for my models. This would make it possibly to create a workflow that could analyze the data for any city, provided the datasets conform to a general schema for 311 calls, crime incidents and blight violation counts, on a regular schedule and predict what properties are likely to be blight. If the data can indeed be standardized across a group of cities, and more known blight can be used to train the models, this would be an amazing opportunity to empower cities to proactively address potential issues while conditions are manageable rather than only be able react to them with bulldozers.
 
 ## Resources & Readings
 * [Detroit Blight Removal Task Force Plan](http://report.timetoendblight.org/index.html)
