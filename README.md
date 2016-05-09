@@ -14,4 +14,4 @@ Before analysis of the data could be undertaken, all files were initially format
 * [Python Notebooks](http://mybinder.org/repo/aliciatb/blight)
 
 ## Predictions Models
-* [RPubs]() *coming soon*
+* [RPubs](http://rpubs.com/alicia/blight)

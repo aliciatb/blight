@@ -3,5 +3,5 @@ account: rpubs
 server: rpubs.com
 appId: https://api.rpubs.com/api/v1/document/179468/26a8e6da20734b8686b32c6e547b43ab
 bundleId: https://api.rpubs.com/api/v1/document/179468/26a8e6da20734b8686b32c6e547b43ab
-url: http://rpubs.com/publish/claim/179468/95d6cf55b9ab4522b24b9040a6567e3e
-when: 1462756223.12273
+url: http://rpubs.com/alicia/179468
+when: 1462769089.1763
