@@ -3,9 +3,8 @@ require(GGally)
 require(scales)
 require(caret)
 require(randomForest)
-#install.packages('rattle',dependencies = TRUE)
-library(rattle)
-
+#library(rattle)
+devtools::install_github("rstudio/rmarkdown")
 setwd('~/projects/blight')
 data = read.csv('building_blight_features.csv',
                 header = TRUE)
@@ -39,6 +38,19 @@ test$ResYrBuilt = NULL
 train$TaxStatus = NULL
 test$TaxStatus = NULL
 
+logistic_model = train(blight ~ ., 
+                       data = na.omit(train),  
+                       method = 'glm',
+                       family = binomial,
+                       preProcess = c('center', 'scale'))
+
+summary(logistic_model)
+plot(varImp(logistic_model))
+
+# test predictions
+logistic_predictions = predict(logistic_model, newdata = test)
+confusionMatrix(logistic_predictions, test$blight)
+
 # first model
 tree_model = train(factor(blight) ~., 
                    method = 'rpart',
@@ -51,7 +63,7 @@ plot(varImp(tree_model))
 plot(tree_model$finalModel)
 text(tree_model$finalModel, use.n = TRUE, all = TRUE, cex = 0.60)
 
-fancyRpartPlot(tree_model$finalModel,main="Tree Model Decisions",sub="")
+#fancyRpartPlot(tree_model$finalModel,main="Tree Model Decisions",sub="")
 
 # test the predictions
 tree_predictions = predict(tree_model, newdata = test)
@@ -97,47 +109,14 @@ rf_predictions = predict(rf_model, test)
 confusionMatrix(rf_predictions, test$blight)
 
 # compare
-results = resamples(list(tree_model = tree_model, 
+results = resamples(list(logistic_model = logistic_model,
+                         tree_model = tree_model, 
                          bagged_model = bagged_model,
                          boost_model = boost_model))
 
 # compare accuracy and kappa
 summary(results)
 
-# plot results
-dotplot(results)
-
-logistic_model = train(blight ~ ., 
-                       data = na.omit(train),  
-                       method = 'glm',
-                       family = binomial,
-                       preProcess = c('center', 'scale'))
-
-summary(logistic_model)
-plot(varImp(logistic_model))
-
-# test predictions
-logistic_predictions = predict(logistic_model, newdata = test)
-confusionMatrix(logistic_predictions, test$blight)
-
-# stepwise logisitic regression
-step_model = train(blight ~ ., 
-                   data = na.omit(train),  
-                   method = 'glmStepAIC',
-                   family = binomial,
-                   preProcess = c('center', 'scale'))
-summary(step_model)
-plot(varImp(step_model))
-
-step_predictions = predict(step_model, newdata = test)
-confusionMatrix(step_predictions, test$blight)
-
-# compare
-results = resamples(list(logistic_model = logistic_model, 
-                         step_model = step_model))
-
-# compare accuracy and kappa
-summary(results)
 
 # plot results
 dotplot(results)
