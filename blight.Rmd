@@ -106,13 +106,12 @@ plot(varImp(logistic_model))
 # test predictions against test set
 logistic_predictions = predict(logistic_model, newdata = test)
 log_matrix = confusionMatrix(logistic_predictions, test$blight)
-# Of the predictions, the [confusion matrix](http://en.wikipedia.org/wiki/Confusion_matrix) indicates
-# **`r log_matrix[1,1]`** true positives, **`r log_matrix[2,1]`** false negatives, **`r log_matrix[1,2]`** false positives and **`r log_matrix[2,2]`** true negatives.
-
+log_matrix
 ```
 
 #### Logistic Model Analysis
 This model indicates that the top 3 fields that have the most predictive value are **Blight Violation Count**, **Crime Count** and **311 Call Count**. The overall accuracy of the model is 100% with a Kappa value of 100%.
+
 ### Tree Model
 The first model is a simple tree that reveals the decisions that most frequently indicated what factors led to blight classfication. 
 ```{r treeModel, message=FALSE, warning=FALSE, echo=FALSE,eval=TRUE}
@@ -130,9 +129,7 @@ text(tree_model$finalModel, use.n = TRUE, all = TRUE, cex = 0.60)
 # test predictions against test set
 tree_predictions = predict(tree_model, newdata = test)
 tree_matrix = confusionMatrix(tree_predictions, test$blight)
-
-# Of the predictions, the [confusion matrix](http://en.wikipedia.org/wiki/Confusion_matrix) indicates
-# **`r tree_matrix[1,1]`** true positives, **`r tree_matrix[2,1]`** false negatives, **`r tree_matrix[1,2]`** false positives and **`r tree_matrix[2,2]`** true negatives.
+tree_matrix
 ```
 
 #### Tree Model Analysis
@@ -150,9 +147,7 @@ plot(varImp(bagged_model))
 
 bagged_predictions = predict(bagged_model, test)
 bag_matrix = confusionMatrix(bagged_predictions, test$blight)
-
-# Of the predictions, the [confusion matrix](http://en.wikipedia.org/wiki/Confusion_matrix) indicates
-# **`r bag_matrix[1,1]`** true positives, **`r bag_matrix[2,1]`** false negatives, **`r bag_matrix[1,2]`** false positives and **`r bag_matrix[2,2]`** true negatives.
+bag_matrix
 ```
 
 #### Bagging Model Analysis
@@ -171,9 +166,7 @@ summary(boost_model$finalModel)
 # predict
 boost_predictions = predict(boost_model, test)
 boost_matrix = confusionMatrix(boost_predictions, test$blight)
-
-# Of the predictions, the [confusion matrix](http://en.wikipedia.org/wiki/Confusion_matrix) indicates
-# **`r boost_matrix[1,1]`** true positives, **`r boost_matrix[2,1]`** false negatives, **`r boost_matrix[1,2]`** false positives and **`r boost_matrix[2,2]`** true negatives.
+boost_matrix
 ```
 
 #### Boosting Model Analysis
@@ -185,7 +178,7 @@ A Random Forest model is the most powerful of the tree classification models tha
 ## Model Comparison
 It is easy to compare the 4 models in R and generating a visualization on how they compare using Caret package [resample methods] (http://www.inside-r.org/packages/cran/caret/docs/as.matrix.resamples).
 
-```{r results, message=FALSE, warning=FALSE, eval=TRUE}
+```{r results, message=FALSE, echo=FALSE, warning=FALSE, eval=TRUE}
 # compare
 results = resamples(list(tree_model = tree_model, 
                          bagged_model = bagged_model,

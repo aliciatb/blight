@@ -4,7 +4,7 @@ require(scales)
 require(caret)
 require(randomForest)
 #library(rattle)
-devtools::install_github("rstudio/rmarkdown")
+
 setwd('~/projects/blight')
 data = read.csv('building_blight_features.csv',
                 header = TRUE)
